@@ -5,10 +5,10 @@ from abc import ABC, abstractmethod
 
 # Base Policy Learner Class
 class PolicyLearner(ABC):
-    def __init__(self, state_dim, action_space, action_representation, **kwargs):
+    def __init__(self, state_dim, action_space, action_representation, device, **kwargs):
         self.action_space = action_space
         self.action_representation = action_representation
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = device
 
     @abstractmethod
     def reset(self):
@@ -24,8 +24,8 @@ class PolicyLearner(ABC):
 
 # Deep Q-Learning (DQN) Policy Learner
 class DeepQLearner(PolicyLearner):
-    def __init__(self, state_dim, action_space, action_representation, hidden_dims, training_rounds, gamma=0.99, lr=0.001, batch_size=64):
-        super().__init__(state_dim, action_space, action_representation)
+    def __init__(self, state_dim, action_space, action_representation, hidden_dims, training_rounds, gamma=0.99, lr=0.001, batch_size=64, device='cpu'):
+        super().__init__(state_dim, action_space, action_representation, device)
         self.gamma = gamma
         self.batch_size = batch_size
         self.q_network = self.build_network(state_dim, hidden_dims, action_space.n).to(self.device)
@@ -73,8 +73,8 @@ class DeepQLearner(PolicyLearner):
 
 # Double DQN Policy Learner
 class DoubleDQN(DeepQLearner):
-    def __init__(self, state_dim, action_space, action_representation, hidden_dims, training_rounds, gamma=0.99, lr=0.001, batch_size=64, tau=0.005):
-        super().__init__(state_dim, action_space, action_representation, hidden_dims, training_rounds, gamma, lr, batch_size)
+    def __init__(self, state_dim, action_space, action_representation, hidden_dims, training_rounds, gamma=0.99, lr=0.001, batch_size=64, tau=0.005, device='cpu'):
+        super().__init__(state_dim, action_space, action_representation, hidden_dims, training_rounds, gamma, lr, batch_size, device)
         self.target_network = self.build_network(state_dim, hidden_dims, action_space.n).to(self.device)
         self.target_network.load_state_dict(self.q_network.state_dict())
         self.tau = tau
@@ -98,14 +98,13 @@ class DoubleDQN(DeepQLearner):
         loss.backward()
         self.optimizer.step()
 
-        # Soft update for target network
         for target_param, param in zip(self.target_network.parameters(), self.q_network.parameters()):
             target_param.data.copy_(self.tau * param.data + (1.0 - self.tau) * target_param.data)
 
 # Actor-Critic (A2C) Policy Learner
 class ActorCriticPolicy(PolicyLearner):
-    def __init__(self, state_dim, action_space, action_representation, hidden_dims, gamma=0.99, lr=0.001):
-        super().__init__(state_dim, action_space, action_representation)
+    def __init__(self, state_dim, action_space, action_representation, hidden_dims, gamma=0.99, lr=0.001, device='cpu'):
+        super().__init__(state_dim, action_space, action_representation, device)
         self.gamma = gamma
         self.actor_network = self.build_actor(state_dim, hidden_dims, action_space.n).to(self.device)
         self.critic_network = self.build_critic(state_dim, hidden_dims).to(self.device)
@@ -148,7 +147,6 @@ class ActorCriticPolicy(PolicyLearner):
                                                         next_states.to(self.device),
                                                         dones.to(self.device))
         
-        # Update critic
         values = self.critic_network(states).squeeze()
         next_values = self.critic_network(next_states).squeeze()
         target_values = rewards + self.gamma * next_values * (1 - dones)
@@ -158,7 +156,6 @@ class ActorCriticPolicy(PolicyLearner):
         critic_loss.backward()
         self.critic_optimizer.step()
         
-        # Update actor
         advantages = (target_values - values).detach()
         log_probs = torch.log(self.actor_network(states).gather(1, actions.unsqueeze(1)).squeeze())
         actor_loss = -(log_probs * advantages).mean()
@@ -169,8 +166,8 @@ class ActorCriticPolicy(PolicyLearner):
 
 # SARSA Policy Learner
 class SARSA(PolicyLearner):
-    def __init__(self, state_dim, action_space, action_representation, hidden_dims, gamma=0.99, lr=0.001, epsilon=0.1):
-        super().__init__(state_dim, action_space, action_representation)
+    def __init__(self, state_dim, action_space, action_representation, hidden_dims, gamma=0.99, lr=0.001, epsilon=0.1, device='cpu'):
+        super().__init__(state_dim, action_space, action_representation, device)
         self.gamma = gamma
         self.epsilon = epsilon
         self.q_network = self.build_network(state_dim, hidden_dims, action_space.n).to(self.device)
@@ -200,15 +197,13 @@ class SARSA(PolicyLearner):
 
     def update_policy(self, batch):
         states, actions, rewards, next_states, next_actions, dones = map(torch.stack, zip(*batch))
-        states, actions, rewards, next_states, next_actions, dones = (
-            states.to(self.device),
-            actions.to(self.device),
-            rewards.to(self.device),
-            next_states.to(self.device),
-            next_actions.to(self.device),
-            dones.to(self.device)
-        )
-
+        states, actions, rewards, next_states, next_actions, dones = (states.to(self.device),
+                                                                      actions.to(self.device),
+                                                                      rewards.to(self.device),
+                                                                      next_states.to(self.device),
+                                                                      next_actions.to(self.device),
+                                                                      dones.to(self.device))
+        
         q_values = self.q_network(states).gather(1, actions.unsqueeze(1)).squeeze()
         with torch.no_grad():
             next_q_values = self.q_network(next_states).gather(1, next_actions.unsqueeze(1)).squeeze()
