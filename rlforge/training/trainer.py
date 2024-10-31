@@ -1,8 +1,8 @@
-# trainer.py
 import torch
 
 class Trainer:
-    def __init__(self, env, agent, max_episodes=1000, max_steps=200, initial_epsilon=1.0, final_epsilon=0.1, epsilon_decay=0.995):
+    def __init__(self, env, agent, max_episodes=1000, max_steps=200, initial_epsilon=1.0, final_epsilon=0.1, 
+                 epsilon_decay=0.995, print_frequency=10):
         self.env = env
         self.agent = agent
         self.max_episodes = max_episodes
@@ -10,6 +10,9 @@ class Trainer:
         self.epsilon = initial_epsilon  
         self.final_epsilon = final_epsilon  
         self.epsilon_decay = epsilon_decay  
+        self.print_frequency = print_frequency
+
+        self.total_rewards = []
 
     def train(self):
         for episode in range(self.max_episodes):
@@ -34,9 +37,11 @@ class Trainer:
                 if done:
                     break
             
-            
             self.epsilon = max(self.final_epsilon, self.epsilon * self.epsilon_decay)
 
-            print(f"Episode {episode + 1}/{self.max_episodes} - Total Reward: {total_reward} - Epsilon: {self.epsilon:.2f}")
+            self.total_rewards.append(total_reward)
+
+            if (episode + 1) % self.print_frequency == 0:
+                print(f"Episode {episode + 1}/{self.max_episodes} - Total Reward: {total_reward} - Epsilon: {self.epsilon:.2f}")
 
         print("Training complete.")
