@@ -1,4 +1,4 @@
-![alt](./logo/rlforge.png)
+![alt](./logo/rlforge_long.png)
 
 # RLForge
 
