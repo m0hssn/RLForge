@@ -9,7 +9,7 @@ class GymEnvironment:
 
     def reset(self):
         state, _ = self.env.reset()
-        return torch.tensor(state, dtype=torch.float32)
+        return torch.tensor(state, dtype=torch.float32), self.action_space
 
     def step(self, action):
         next_state, reward, done, _, _ = self.env.step(action)
