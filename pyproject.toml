@@ -5,14 +5,16 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "rlforge"
 version = "0.1.0"
+
 description = "A Reinforcement Learning library with various agents and action representations."
+
 authors = [
     { name = "Mohsen Sadeghi", email = "m0hsnn@hotmail.com" }
 ]
+
 license = { file = "LICENSE" }
 readme = "README.md"
-homepage = "https://github.com/m0hssn/RLForge"
-repository = "https://github.com/m0hssn/RLForge"
+
 keywords = ["reinforcement learning", "RL", "AI", "machine learning"]
 
 dependencies = [
@@ -21,6 +23,9 @@ dependencies = [
 ]
 
 
+[project.urls]
+homepage = "https://github.com/m0hssn/RLForge"
+repository = "https://github.com/m0hssn/RLForge"
 
 [tool.setuptools.packages.find]
 where = ["."]
