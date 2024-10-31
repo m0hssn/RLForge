@@ -24,11 +24,15 @@ class PolicyLearner(ABC):
 
 # Deep Q-Learning (DQN) Policy Learner
 class DeepQLearner(PolicyLearner):
-    def __init__(self, state_dim, action_space, action_representation, hidden_dims, training_rounds, gamma=0.99, lr=0.001, batch_size=64, device='cpu'):
+    def __init__(self, state_dim, action_space, action_representation, hidden_dims=None, training_rounds=None, 
+                 gamma=0.99, lr=0.001, batch_size=64, device='cpu', custom_network=None):
         super().__init__(state_dim, action_space, action_representation, device)
         self.gamma = gamma
         self.batch_size = batch_size
-        self.q_network = self.build_network(state_dim, hidden_dims, action_space.n).to(self.device)
+        if custom_network is not None:
+            self.q_network = custom_network.to(self.device)
+        else:
+            self.q_network = self.build_network(state_dim, hidden_dims, action_space.n).to(self.device)
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=lr)
 
     def build_network(self, input_dim, hidden_dims, output_dim):
@@ -73,9 +77,10 @@ class DeepQLearner(PolicyLearner):
 
 # Double DQN Policy Learner
 class DoubleDQN(DeepQLearner):
-    def __init__(self, state_dim, action_space, action_representation, hidden_dims, training_rounds, gamma=0.99, lr=0.001, batch_size=64, tau=0.005, device='cpu'):
-        super().__init__(state_dim, action_space, action_representation, hidden_dims, training_rounds, gamma, lr, batch_size, device)
-        self.target_network = self.build_network(state_dim, hidden_dims, action_space.n).to(self.device)
+    def __init__(self, state_dim, action_space, action_representation, hidden_dims=None, training_rounds=None,
+                 gamma=0.99, lr=0.001, batch_size=64, tau=0.005, device='cpu', custom_network=None):
+        super().__init__(state_dim, action_space, action_representation, hidden_dims, training_rounds, gamma, lr, batch_size, device, custom_network)
+        self.target_network = self.build_network(state_dim, hidden_dims, action_space.n).to(self.device) if custom_network is None else custom_network.to(self.device)
         self.target_network.load_state_dict(self.q_network.state_dict())
         self.tau = tau
 
@@ -103,11 +108,12 @@ class DoubleDQN(DeepQLearner):
 
 # Actor-Critic (A2C) Policy Learner
 class ActorCriticPolicy(PolicyLearner):
-    def __init__(self, state_dim, action_space, action_representation, hidden_dims, gamma=0.99, lr=0.001, device='cpu'):
+    def __init__(self, state_dim, action_space, action_representation, hidden_dims=None, gamma=0.99, 
+                 lr=0.001, device='cpu', custom_actor=None, custom_critic=None):
         super().__init__(state_dim, action_space, action_representation, device)
         self.gamma = gamma
-        self.actor_network = self.build_actor(state_dim, hidden_dims, action_space.n).to(self.device)
-        self.critic_network = self.build_critic(state_dim, hidden_dims).to(self.device)
+        self.actor_network = custom_actor.to(self.device) if custom_actor is not None else self.build_actor(state_dim, hidden_dims, action_space.n).to(self.device)
+        self.critic_network = custom_critic.to(self.device) if custom_critic is not None else self.build_critic(state_dim, hidden_dims).to(self.device)
         self.actor_optimizer = optim.Adam(self.actor_network.parameters(), lr=lr)
         self.critic_optimizer = optim.Adam(self.critic_network.parameters(), lr=lr)
 
@@ -166,11 +172,15 @@ class ActorCriticPolicy(PolicyLearner):
 
 # SARSA Policy Learner
 class SARSA(PolicyLearner):
-    def __init__(self, state_dim, action_space, action_representation, hidden_dims, gamma=0.99, lr=0.001, epsilon=0.1, device='cpu'):
+    def __init__(self, state_dim, action_space, action_representation, hidden_dims=None, 
+                 gamma=0.99, lr=0.001, epsilon=0.1, device='cpu', custom_network=None):
         super().__init__(state_dim, action_space, action_representation, device)
         self.gamma = gamma
         self.epsilon = epsilon
-        self.q_network = self.build_network(state_dim, hidden_dims, action_space.n).to(self.device)
+        if custom_network is not None:
+            self.q_network = custom_network.to(self.device)
+        else:
+            self.q_network = self.build_network(state_dim, hidden_dims, action_space.n).to(self.device)
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=lr)
 
     def build_network(self, input_dim, hidden_dims, output_dim):
@@ -198,11 +208,11 @@ class SARSA(PolicyLearner):
     def update_policy(self, batch):
         states, actions, rewards, next_states, next_actions, dones = map(torch.stack, zip(*batch))
         states, actions, rewards, next_states, next_actions, dones = (states.to(self.device),
-                                                                      actions.to(self.device),
-                                                                      rewards.to(self.device),
-                                                                      next_states.to(self.device),
-                                                                      next_actions.to(self.device),
-                                                                      dones.to(self.device))
+                                                                     actions.to(self.device),
+                                                                     rewards.to(self.device),
+                                                                     next_states.to(self.device),
+                                                                     next_actions.to(self.device),
+                                                                     dones.to(self.device))
         
         q_values = self.q_network(states).gather(1, actions.unsqueeze(1)).squeeze()
         with torch.no_grad():
