@@ -16,8 +16,11 @@ repository = "https://github.com/m0hssn/RLForge"
 keywords = ["reinforcement learning", "RL", "AI", "machine learning"]
 
 [project.dependencies]
-torch = "^2.0.1"
-gymnasium = "^1.0.0"
+# List dependencies as an array
+dependencies = [
+    "torch>=2.0.1",
+    "gymnasium>=1.0.0"
+]
 
 [project.optional-dependencies]
 dev = [
